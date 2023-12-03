@@ -35,15 +35,36 @@ def get_frame(
     return windows, labels
 
 
+# TODO: This function should be merged with the `get_frame` function
+# to create a cleaner codebase.
 def get_sequential_frame(
     df: pd.DataFrame,
     window_size: int,
-):
+    labelled: bool = True,
+) -> tuple:
     """
     An altenative of the `get_frame` function, which create a set of
     multiple windows in a sequential manner.
-    # TODO: This function should be merged with the `get_frame` function
-    # to create a cleaner codebase.
+
+    Parameters
+    ----------
+        df: pandas.DataFrame
+            The dataframe that the windows/frames will be created from.
+
+        window_size: int
+            The number that specifies how many records/rows/entries of data
+            are included in each window.
+
+        labelled: bool, default=True
+            If True, the function will return an extra list containing the
+            labels of the dataframe, otherwise only the windowed data windows
+            are returned.
+
+    Returns
+    -------
+    tuple(list, list)
+        Return a tuple contains 2 array-like objects that contains windowed data and
+        windowed labels.
     """
     window_range: int = df.shape[0] - window_size
 
@@ -60,6 +81,65 @@ def get_sequential_frame(
     labels = np.asarray(labels)
 
     return windows, labels
+
+
+# TODO: Make this and the `get_sequential_frame` function one.
+def get_sequential_input(
+    df: pd.DataFrame,
+    window_size: int,
+    labelled: bool = True,
+) -> tuple:
+    """
+    An altenative of the `get_frame` function, which create a set of
+    multiple windows in a sequential manner.
+
+    Parameters
+    ----------
+        df: pandas.DataFrame
+            The dataframe that the windows/frames will be created from.
+
+        window_size: int
+            The number that specifies how many records/rows/entries of data
+            are included in each window.
+
+        labelled: bool, default=True
+            If True, the function will return an extra list containing the
+            labels of the dataframe, otherwise only the windowed data windows
+            are returned.
+
+    Returns
+    -------
+    tuple(list, list)
+        Return a tuple contains 2 array-like objects that contains windowed data and
+        windowed labels.
+    """
+    window_range: int = df.shape[0] - window_size
+
+    windows: list = []
+    labels: list = []
+
+    if labelled:
+        for index in range(0, window_range, window_size):
+            window: pd.DataFrame = df.iloc[index : index + window_size]
+
+            windows.append(window.iloc[:, :-1])
+            labels.append(window["label"])
+    else:
+        for index in range(0, window_range, window_size):
+            window: pd.DataFrame = df.iloc[index : index + window_size]
+
+            windows.append(window.iloc[:, :-1])
+
+    # Bring the segments into a better shape
+    windows = np.asarray(windows).astype(
+        np.float32
+    )  # .reshape(-1, frame_size, N_FEATURES)
+    labels = np.asarray(labels)
+
+    if labelled:
+        return windows, labels
+    else:
+        return windows
 
 
 def get_epoch_frame(
@@ -123,6 +203,7 @@ def standardize_dataframe(
     std_cols: Union[
         str,
         list,
+        pd.Index,
     ],
 ):
     """
@@ -144,7 +225,7 @@ def standardize_dataframe(
 
     std_df: pd.DataFrame = pd.DataFrame(
         data=merged_arr,
-        columns=data.columns,
+        columns=std_cols.tolist() + remaining_cols,
     )
     # std_df.iloc[:, -1] = std_df.iloc[:, -1].astype("int")
 
@@ -201,21 +282,34 @@ def plot_confusion_matrix(
 
     Parameters
     ----------
-    actual : array-like that stores the ground truth (correct) target values.
+    actual : array-like
+        Stores the ground truth (correct) target values.
 
-    pred : array-like that stores the estimated targets as returned by a classifier.
+    pred : array-like
+        Stores the estimated targets as returned by a classifier.
 
-    unique_numerical_labels: array-like that stores the merical encoding of unique classes.
+    unique_numerical_labels: array-like
+        Stores the merical encoding of unique classes.
 
-    display_labels: array-like that stores the class names.
+    display_labels: array-like
+        Stores the class names.
 
-    normalize (default="true"): string that specifies how the confusion matrix should be normalized. This will
-    be passed to ``sklearn.metrics.confusion_matrix``
+    normalize: string, default="true"
+        Specifies how the confusion matrix should be normalized. This will
+        be passed to ``sklearn.metrics.confusion_matrix``
 
-    title (default="Confusion matrix"): string that is used as the name of the confusion matrix.
+    title: string, default="Confusion matrix"
+        The name of the confusion matrix, displayed on top of the graphic.
 
-    export (default=false): string value that decides whether or not the confusion matrix should
-    be exported as a picture.
+    export: string, default="false" (default=false)
+        The path in which the graphic will be saved to. Default to "false",
+        which means no export.
+
+    Returns
+    -------
+    numpy.ndarray
+        Return the 2-D numpy array that holds the values of the matrix.
+
     """
     mat = confusion_matrix(
         y_true=actual,
