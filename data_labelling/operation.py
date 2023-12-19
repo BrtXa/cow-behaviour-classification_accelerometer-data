@@ -10,12 +10,12 @@ def clean_data(full_data: pd.DataFrame) -> pd.DataFrame:
     full_data.drop_duplicates(inplace=True)
 
     # # Sort values based on timestamps.
-    # full_data.sort_values(
-    #     by=["timestamps"],
-    #     ascending=True,
-    #     inplace=True,
-    # )
-    # full_data = full_data.reset_index(drop=True)
+    full_data.sort_values(
+        by=["timestamps"],
+        ascending=True,
+        inplace=True,
+    )
+    full_data = full_data.reset_index(drop=True)
 
     # Convert numerical values (input data) to float types.
     full_data_export: pd.DataFrame = full_data.copy()
@@ -46,37 +46,15 @@ def label_data(
         window_size=window_size,
         labelled=False,
     )
-
     test_ds = tf.data.Dataset.from_tensor_slices(x_test).batch(batch_size)
-
     # Process test results and output confusion matrices.
     y_pred: np.ndarray = model.predict(
         x=test_ds,
         verbose=0,
     )
 
-    # There are some rows that are not included in the windows (some final rows).
-    trimmed_rows: int = len(raw_data) % window_size
-    missing_data: pd.DataFrame = raw_data.iloc[-window_size:]
-    padding_data: pd.DataFrame = raw_data.iloc[1:2]
-    # Append a padding row to the dataframe because `get_squential_input` automatically rejects
-    # dataframes with 600 or less row.
-    trimmed_data: pd.DataFrame = pd.concat(
-        objs=[missing_data, padding_data],
-    )
-    x_test_trimmed: np.ndarray = get_sequential_input(
-        df=trimmed_data,
-        window_size=window_size,
-        labelled=False,
-    )
-    trimmed_test_ds = tf.data.Dataset.from_tensor_slices(x_test_trimmed).batch(
-        batch_size
-    )
-    trimmed_y_pred: np.ndarray = model.predict(
-        x=trimmed_test_ds,
-        verbose=0,
-    )
-
+    # Obtain the prediction by taking the argument max of the returned tensor, flatten the
+    # prediction tensor and create a numpy array from that.
     y_pred_cm: tf.Tensor = (
         tf.math.argmax(
             y_pred,
@@ -88,33 +66,27 @@ def label_data(
         tensor=y_pred_cm,
         shape=(-1),
     )
-
-    trimmed_y_pred_cm: tf.Tensor = (
-        tf.math.argmax(
-            trimmed_y_pred,
-            axis=2,
-            output_type=tf.int64,
-        ),
-    )[0]
-    trimmed_y_pred_cm = tf.reshape(
-        tensor=trimmed_y_pred_cm,
-        shape=(-1),
-    )
     predicted_labels: np.ndarray = np.array(
         y_pred_cm,
         dtype=np.int32,
     )
 
-    trimmed_predicted_labels: np.ndarray = np.array(
-        trimmed_y_pred_cm,
-        dtype=np.int32,
-    )[trimmed_rows:]
+    # There are some rows that are not included in the windows (some final rows). Get the
+    # sequential input for the last `window_size` rows and take only the missing one.
+    # no_missing_rows: int = len(raw_data) % window_size
+    # last_window: pd.DataFrame = raw_data.iloc[-window_size:]
+    # missing_inputs: np.ndarray = get_sequential_input(
+    #     df=last_window,
+    #     window_size=window_size,
+    #     labelled=False,
+    # )
 
-    labelled_classes: np.ndarray = np.concatenate(
-        (predicted_labels, trimmed_predicted_labels),
-        axis=0,
-        dtype=np.int32,
-    )
+    # labelled_classes: np.ndarray = np.concatenate(
+    #     (predicted_labels, trimmed_predicted_labels),
+    #     axis=0,
+    #     dtype=np.int32,
+    # )
+    labelled_classes: np.ndarray = predicted_labels
     label_map: dict[int, str] = {
         0: "g",
         1: "i",

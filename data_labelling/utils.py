@@ -113,7 +113,9 @@ def get_sequential_input(
         Return a tuple contains 2 array-like objects that contains windowed data and
         windowed labels.
     """
-    window_range: int = df.shape[0] - window_size
+    # There will be cases where not all the data is selected for input windows.
+    no_complete_windows: int = df.shape[0] // window_size
+    window_range: int = no_complete_windows * window_size
 
     windows: list = []
     labels: list = []
