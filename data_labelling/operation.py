@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import keras
 
 from utils import get_sequential_input, standardize_dataframe
 
@@ -37,7 +38,7 @@ def clean_data(full_data: pd.DataFrame) -> pd.DataFrame:
 
 def label_data(
     raw_data: pd.DataFrame,
-    model: tf.keras.Model,
+    model: keras.Model,
     window_size: int,
     batch_size: int,
 ) -> np.ndarray:
