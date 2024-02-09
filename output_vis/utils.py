@@ -47,6 +47,9 @@ def plot_distributions(
     counts: np.ndarray,
     percentages: np.ndarray,
     plot_title: str,
+    xlabel_bar: str = "",
+    ylabel_bar: str = "",
+    output_path: str = ".",
 ) -> None:
     """
     Plot a pie chart and a bar chart side-by-side that illustrate how classes
@@ -63,6 +66,12 @@ def plot_distributions(
         An array-like object (preferably numpy array) that stores percentages of labels.
     plot_title: str
         The name of the graph, should be set as the name of the sensor.
+    xlabel_bar: str
+        The name of the x axis of the bar chart.
+    ylabel_bar: str
+        The name of the y axis of the bar chart.
+    output_path: str
+        The path where output images are placed.
 
     Returns
     -------
@@ -88,10 +97,14 @@ def plot_distributions(
     # Plot 1: The bar chart.
     rects: matplotlib.container.BarContainer = ax[1].bar(
         x=labels,
-        height=percentages,
+        height=counts,
     )
     ax[1].bar_label(
         container=rects,
         labels=["{}".format(n) for n in counts],
         # fmt="%.2f",
     )
+    ax[1].set_xlabel(xlabel=xlabel_bar)
+    ax[1].set_ylabel(ylabel=ylabel_bar)
+    plt.show()
+    fig.savefig("{}.png".format(plot_title))
